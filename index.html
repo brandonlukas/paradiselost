@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Paradise Lost · Book I</title>
+<title>Paradise Lost</title>
 <style>
   :root {
     --bg: #14120f;
@@ -75,6 +75,21 @@
   .pageindex.open { grid-template-rows: 1fr; }
   .pageindex > div { overflow: hidden; }
   .pageindex-inner { padding: 1.4rem 0 0.4rem; }
+  .bookrow { display: flex; justify-content: center; gap: 1.4rem; margin-bottom: 1.1rem; }
+  .bookrow button {
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--dim);
+    cursor: pointer;
+    padding-bottom: 0.15rem;
+    border-bottom: 1px solid transparent;
+  }
+  .bookrow button:hover { color: var(--warm); }
+  .bookrow button.here { color: var(--warm); border-bottom-color: var(--warm); }
   .pagegrid {
     display: flex;
     flex-wrap: wrap;
@@ -252,6 +267,7 @@
     </div>
     <div class="pageindex" id="pageindex">
       <div><div class="pageindex-inner">
+        <div class="bookrow" id="bookrow"></div>
         <div class="pagegrid" id="pagegrid"></div>
         <div class="indexfoot">
           <button id="restart">begin again</button>
@@ -264,7 +280,7 @@
   <div id="walkon"></div>
 </main>
 
-<script src="book1.js"></script>
+<script src="books.js"></script>
 <script>
 /* annotations, keyed by Book I line number — grows page by page */
 const NOTES = {
@@ -3792,25 +3808,45 @@ const NOTES = {
 
 };
 
+const NOTES_BY_BOOK = [NOTES, {}];   // Book II annotations to come
+
 const verse = document.getElementById('verse');
 const walkon = document.getElementById('walkon');
 const where = document.getElementById('where');
 const pageindex = document.getElementById('pageindex');
 const pagegrid = document.getElementById('pagegrid');
+const bookrow = document.getElementById('bookrow');
 const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PACE = 2200;
-const KEY = 'pl-book1-page';
-const MAXKEY = 'pl-book1-max';
 
-const clampPage = p => Math.max(0, Math.min(p || 0, PAGES.length - 1));
-const hashPage = () => {
-  const m = location.hash.match(/^#p(\d+)$/);
-  return m ? clampPage(m[1] - 1) : null;
+let book = 0, page = 0, frontier = { b: 0, p: 0 };
+try {
+  const l = JSON.parse(localStorage.getItem('pl-loc') || 'null');
+  const f = JSON.parse(localStorage.getItem('pl-frontier') || 'null');
+  if (l) { book = l.b; page = l.p; }
+  if (f) frontier = f;
+  if (!l) {  // migrate pre-multi-book storage
+    const old = parseInt(localStorage.getItem('pl-book1-page'));
+    if (!isNaN(old)) {
+      page = old;
+      frontier = { b: 0, p: Math.max(old, parseInt(localStorage.getItem('pl-book1-max')) || 0) };
+    }
+  }
+} catch (e) {}
+const parseHash = () => {
+  let m = location.hash.match(/^#b(\d+)p(\d+)$/);
+  if (m) return { b: +m[1] - 1, p: +m[2] - 1 };
+  m = location.hash.match(/^#p(\d+)$/);   // legacy Book I links
+  if (m) return { b: 0, p: +m[1] - 1 };
+  return null;
 };
-let page = hashPage() ?? clampPage(parseInt(localStorage.getItem(KEY)));
-let maxPage = Math.max(page, clampPage(parseInt(localStorage.getItem(MAXKEY))));
+const h = parseHash();
+if (h) { book = h.b; page = h.p; }
+book = Math.max(0, Math.min(book || 0, BOOKS.length - 1));
+page = Math.max(0, Math.min(page || 0, BOOKS[book].pages.length - 1));
+
 let units = [], next = 0, timer = null;
 
 function buildUnit(text, abs) {
@@ -3822,7 +3858,7 @@ function buildUnit(text, abs) {
   if (abs % 5 === 0) p.dataset.n = abs;
   unit.appendChild(p);
 
-  const note = NOTES[abs];
+  const note = NOTES_BY_BOOK[book][abs];
   if (note) {
     p.classList.add('notable');
     p.tabIndex = 0;
@@ -3874,14 +3910,28 @@ function closeAll() {
 
 function renderPage() {
   clearTimeout(timer);
-  const pg = PAGES[page];
+  const pages = BOOKS[book].pages;
+  const pg = pages[page];
   const count = pg.b.reduce((n, b) => n + b.length, 0);
-  where.textContent = `BOOK I · PAGE ${page + 1} OF ${PAGES.length} · LINES ${pg.s}–${pg.s + count - 1}`;
-  prevBtn.disabled = page === 0;
-  nextBtn.disabled = page === PAGES.length - 1;
+  where.textContent = `BOOK ${BOOKS[book].n} · PAGE ${page + 1} OF ${pages.length} · LINES ${pg.s}–${pg.s + count - 1}`;
+  prevBtn.disabled = book === 0 && page === 0;
+  nextBtn.disabled = book === BOOKS.length - 1 && page === pages.length - 1;
+
+  if (+pagegrid.dataset.book !== book) {   // rebuild grid for this book
+    pagegrid.dataset.book = book;
+    pagegrid.innerHTML = '';
+    for (let i = 0; i < pages.length; i++) {
+      const b = document.createElement('button');
+      b.textContent = i + 1;
+      b.addEventListener('click', () => go(book, i));
+      pagegrid.appendChild(b);
+    }
+  }
+  const walked = i => book < frontier.b || (book === frontier.b && i <= frontier.p);
   [...pagegrid.children].forEach((b, i) => {
-    b.className = (i <= maxPage ? 'walked' : '') + (i === page ? ' here' : '');
+    b.className = (walked(i) ? 'walked' : '') + (i === page ? ' here' : '');
   });
+  [...bookrow.children].forEach((b, i) => b.className = i === book ? 'here' : '');
 
   verse.innerHTML = '';
   units = [];
@@ -3898,11 +3948,14 @@ function renderPage() {
   });
 
   walkon.className = '';
-  walkon.innerHTML = page + 1 < PAGES.length
+  const lastPage = page === pages.length - 1;
+  walkon.innerHTML = !lastPage
     ? `<button id="walk-btn">walk on ›</button>`
-    : `<p class="fin">the end of Book I · Book II awaits</p>`;
+    : book + 1 < BOOKS.length
+      ? `<button id="walk-btn">walk on · Book ${BOOKS[book + 1].n} ›</button>`
+      : `<p class="fin">the end of Book ${BOOKS[book].n} · more books to come</p>`;
   const btn = document.getElementById('walk-btn');
-  if (btn) btn.addEventListener('click', () => go(page + 1));
+  if (btn) btn.addEventListener('click', () => step(1));
 
   next = 0;
   if (RM) {
@@ -3914,16 +3967,30 @@ function renderPage() {
   }
 }
 
-function go(p) {
-  page = clampPage(p);
-  maxPage = Math.max(maxPage, page);
-  localStorage.setItem(KEY, page);
-  localStorage.setItem(MAXKEY, maxPage);
-  history.replaceState(null, '', '#p' + (page + 1));
+function go(b, p) {
+  book = Math.max(0, Math.min(b || 0, BOOKS.length - 1));
+  page = Math.max(0, Math.min(p || 0, BOOKS[book].pages.length - 1));
+  if (book > frontier.b || (book === frontier.b && page > frontier.p)) frontier = { b: book, p: page };
+  localStorage.setItem('pl-loc', JSON.stringify({ b: book, p: page }));
+  localStorage.setItem('pl-frontier', JSON.stringify(frontier));
+  history.replaceState(null, '', `#b${book + 1}p${page + 1}`);
   pageindex.classList.remove('open');
   where.setAttribute('aria-expanded', 'false');
   scrollTo({ top: 0, behavior: 'auto' });
   renderPage();
+}
+
+/* one page forward or back, crossing book boundaries */
+function step(dir) {
+  let b = book, p = page + dir;
+  if (p < 0) {
+    if (b === 0) return;
+    b--; p = BOOKS[b].pages.length - 1;
+  } else if (p >= BOOKS[b].pages.length) {
+    if (b === BOOKS.length - 1) return;
+    b++; p = 0;
+  }
+  go(b, p);
 }
 
 /* ---- surfacing: lines emerge from the dark, one at a time ---- */
@@ -3942,12 +4009,12 @@ function schedule() {
 }
 
 /* ---- navigation: the place-line unfolds into a page index ---- */
-for (let i = 0; i < PAGES.length; i++) {
+BOOKS.forEach((bk, i) => {
   const b = document.createElement('button');
-  b.textContent = i + 1;
-  b.addEventListener('click', () => go(i));
-  pagegrid.appendChild(b);
-}
+  b.textContent = 'Book ' + bk.n;
+  b.addEventListener('click', () => go(i, 0));
+  bookrow.appendChild(b);
+});
 const toggleIndex = () => {
   const open = pageindex.classList.toggle('open');
   where.setAttribute('aria-expanded', open);
@@ -3956,13 +4023,13 @@ where.addEventListener('click', toggleIndex);
 where.addEventListener('keydown', e => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleIndex(); }
 });
-prevBtn.addEventListener('click', () => go(page - 1));
-nextBtn.addEventListener('click', () => go(page + 1));
-document.getElementById('restart').addEventListener('click', () => go(0));
-document.getElementById('frontier').addEventListener('click', () => go(maxPage));
+prevBtn.addEventListener('click', () => step(-1));
+nextBtn.addEventListener('click', () => step(1));
+document.getElementById('restart').addEventListener('click', () => go(0, 0));
+document.getElementById('frontier').addEventListener('click', () => go(frontier.b, frontier.p));
 addEventListener('hashchange', () => {
-  const h = hashPage();
-  if (h !== null && h !== page) go(h);
+  const h = parseHash();
+  if (h && (h.b !== book || h.p !== page)) go(h.b, h.p);
 });
 
 /* swipe to page */
@@ -3972,7 +4039,7 @@ document.addEventListener('touchstart', e => {
 }, { passive: true });
 document.addEventListener('touchend', e => {
   const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
-  if (Math.abs(dx) > 70 && Math.abs(dy) < 50) go(page + (dx < 0 ? 1 : -1));
+  if (Math.abs(dx) > 70 && Math.abs(dy) < 50) step(dx < 0 ? 1 : -1);
 }, { passive: true });
 
 /* tap the dark, or press space, to summon the next line early */
@@ -3982,12 +4049,13 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key === ' ' && e.target === document.body) { e.preventDefault(); surface(); }
   if (e.key === 'Escape') { closeAll(); schedule(); }
-  if (e.key === 'ArrowLeft' && page > 0) go(page - 1);
-  if (e.key === 'ArrowRight' && page < PAGES.length - 1) go(page + 1);
+  if (e.key === 'ArrowLeft') step(-1);
+  if (e.key === 'ArrowRight') step(1);
 });
 
-history.replaceState(null, '', '#p' + (page + 1));
-localStorage.setItem(MAXKEY, maxPage);
+history.replaceState(null, '', `#b${book + 1}p${page + 1}`);
+if (book > frontier.b || (book === frontier.b && page > frontier.p)) frontier = { b: book, p: page };
+localStorage.setItem('pl-frontier', JSON.stringify(frontier));
 renderPage();
 </script>
 </body>
