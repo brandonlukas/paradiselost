@@ -128,6 +128,25 @@
 
   .para + .para { margin-top: 1.35rem; }
 
+  /* the cover spread: stacked on narrow screens, plate beside Argument on wide */
+  .cover {
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(90vw, 33rem);
+  }
+  @media (min-width: 780px) {
+    .cover {
+      width: min(90vw, 54rem);
+      display: grid;
+      grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
+      gap: 2.8rem;
+      align-items: start;
+    }
+    .cover .plate { margin-bottom: 0; }
+    .cover .plate img { max-width: none; }
+  }
+
   .plate { margin-bottom: 2.4rem; }
   .plate img {
     display: block;
@@ -8540,18 +8559,21 @@ function renderPage() {
   verse.innerHTML = '';
   units = [];
   if (pg.cover) {   // the threshold page: plate and Argument, present at once
+    const cov = document.createElement('div');
+    cov.className = 'cover';
     if (PLATES[book]) {
       const pl = document.createElement('div');
       pl.className = 'unit plate surfaced';
       pl.innerHTML = `<img src="${PLATES[book]}" alt="Book ${BOOKS[book].n} plate">`;
-      verse.appendChild(pl);
+      cov.appendChild(pl);
     }
     if (BOOKS[book].arg) {
       const a = document.createElement('div');
       a.className = 'unit argument surfaced';
       a.innerHTML = `<span class="arglabel">The Argument</span>${BOOKS[book].arg}`;
-      verse.appendChild(a);
+      cov.appendChild(a);
     }
+    verse.appendChild(cov);
   } else {
     let abs = pg.s;
     pg.b.forEach(block => {
