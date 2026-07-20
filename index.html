@@ -40,13 +40,75 @@
     text-transform: uppercase;
     color: var(--dim);
   }
-  header p {
+  .whererow {
     margin-top: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+  .whererow .arrow {
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 1.05rem;
+    color: var(--dim);
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    opacity: 0.6;
+  }
+  .whererow .arrow:hover { opacity: 1; color: var(--warm); }
+  .whererow .arrow:disabled { opacity: 0.15; cursor: default; }
+  #where {
     font-size: 0.85rem;
     letter-spacing: 0.12em;
     color: var(--dim);
-    opacity: 0.7;
+    cursor: pointer;
+    border-bottom: 1px dotted transparent;
   }
+  #where:hover { color: var(--warm); border-bottom-color: var(--warm); }
+  .pageindex {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .pageindex.open { grid-template-rows: 1fr; }
+  .pageindex > div { overflow: hidden; }
+  .pageindex-inner { padding: 1.4rem 0 0.4rem; }
+  .pagegrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    justify-content: center;
+    max-width: 26rem;
+    margin: 0 auto;
+  }
+  .pagegrid button {
+    width: 2.1rem;
+    height: 2.1rem;
+    background: none;
+    border: 1px solid rgba(201, 163, 95, 0.2);
+    border-radius: 2px;
+    color: var(--dim);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  .pagegrid button.walked { color: var(--warm); border-color: rgba(201, 163, 95, 0.55); }
+  .pagegrid button.here { background: rgba(201, 163, 95, 0.15); color: #f5eeda; }
+  .pagegrid button:hover { border-color: var(--warm); color: #f5eeda; }
+  .indexfoot { margin-top: 1rem; display: flex; justify-content: center; gap: 2rem; }
+  .indexfoot button {
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--dim);
+    cursor: pointer;
+  }
+  .indexfoot button:hover { color: var(--warm); }
 
   .para + .para { margin-top: 1.35rem; }
 
@@ -177,30 +239,26 @@
   }
   #walkon button:hover { opacity: 1; }
   #walkon .fin { font-size: 0.85rem; letter-spacing: 0.15em; color: var(--dim); }
-  #turnback {
-    position: fixed;
-    top: 1.2rem;
-    left: 1.4rem;
-    font-size: 0.75rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--dim);
-    background: none;
-    border: none;
-    font-family: inherit;
-    cursor: pointer;
-    opacity: 0.4;
-    transition: opacity 0.4s;
-  }
-  #turnback:hover { opacity: 0.9; }
 </style>
 </head>
 <body>
-<button id="turnback" hidden>‹ turn back</button>
 <main>
   <header>
     <h1>Paradise Lost</h1>
-    <p id="where"></p>
+    <div class="whererow">
+      <button class="arrow" id="prev" aria-label="previous page">‹</button>
+      <span id="where" role="button" tabindex="0" aria-expanded="false"></span>
+      <button class="arrow" id="next" aria-label="next page">›</button>
+    </div>
+    <div class="pageindex" id="pageindex">
+      <div><div class="pageindex-inner">
+        <div class="pagegrid" id="pagegrid"></div>
+        <div class="indexfoot">
+          <button id="restart">begin again</button>
+          <button id="frontier">to the frontier</button>
+        </div>
+      </div></div>
+    </div>
   </header>
   <div id="verse"></div>
   <div id="walkon"></div>
@@ -3736,13 +3794,23 @@ const NOTES = {
 
 const verse = document.getElementById('verse');
 const walkon = document.getElementById('walkon');
-const turnback = document.getElementById('turnback');
 const where = document.getElementById('where');
+const pageindex = document.getElementById('pageindex');
+const pagegrid = document.getElementById('pagegrid');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PACE = 2200;
 const KEY = 'pl-book1-page';
+const MAXKEY = 'pl-book1-max';
 
-let page = Math.min(parseInt(localStorage.getItem(KEY)) || 0, PAGES.length - 1);
+const clampPage = p => Math.max(0, Math.min(p || 0, PAGES.length - 1));
+const hashPage = () => {
+  const m = location.hash.match(/^#p(\d+)$/);
+  return m ? clampPage(m[1] - 1) : null;
+};
+let page = hashPage() ?? clampPage(parseInt(localStorage.getItem(KEY)));
+let maxPage = Math.max(page, clampPage(parseInt(localStorage.getItem(MAXKEY))));
 let units = [], next = 0, timer = null;
 
 function buildUnit(text, abs) {
@@ -3809,7 +3877,11 @@ function renderPage() {
   const pg = PAGES[page];
   const count = pg.b.reduce((n, b) => n + b.length, 0);
   where.textContent = `BOOK I · PAGE ${page + 1} OF ${PAGES.length} · LINES ${pg.s}–${pg.s + count - 1}`;
-  turnback.hidden = page === 0;
+  prevBtn.disabled = page === 0;
+  nextBtn.disabled = page === PAGES.length - 1;
+  [...pagegrid.children].forEach((b, i) => {
+    b.className = (i <= maxPage ? 'walked' : '') + (i === page ? ' here' : '');
+  });
 
   verse.innerHTML = '';
   units = [];
@@ -3843,8 +3915,13 @@ function renderPage() {
 }
 
 function go(p) {
-  page = p;
+  page = clampPage(p);
+  maxPage = Math.max(maxPage, page);
   localStorage.setItem(KEY, page);
+  localStorage.setItem(MAXKEY, maxPage);
+  history.replaceState(null, '', '#p' + (page + 1));
+  pageindex.classList.remove('open');
+  where.setAttribute('aria-expanded', 'false');
   scrollTo({ top: 0, behavior: 'auto' });
   renderPage();
 }
@@ -3864,17 +3941,53 @@ function schedule() {
   timer = setTimeout(surface, PACE);
 }
 
-turnback.addEventListener('click', () => go(page - 1));
+/* ---- navigation: the place-line unfolds into a page index ---- */
+for (let i = 0; i < PAGES.length; i++) {
+  const b = document.createElement('button');
+  b.textContent = i + 1;
+  b.addEventListener('click', () => go(i));
+  pagegrid.appendChild(b);
+}
+const toggleIndex = () => {
+  const open = pageindex.classList.toggle('open');
+  where.setAttribute('aria-expanded', open);
+};
+where.addEventListener('click', toggleIndex);
+where.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleIndex(); }
+});
+prevBtn.addEventListener('click', () => go(page - 1));
+nextBtn.addEventListener('click', () => go(page + 1));
+document.getElementById('restart').addEventListener('click', () => go(0));
+document.getElementById('frontier').addEventListener('click', () => go(maxPage));
+addEventListener('hashchange', () => {
+  const h = hashPage();
+  if (h !== null && h !== page) go(h);
+});
+
+/* swipe to page */
+let tx = 0, ty = 0;
+document.addEventListener('touchstart', e => {
+  tx = e.touches[0].clientX; ty = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+  if (Math.abs(dx) > 70 && Math.abs(dy) < 50) go(page + (dx < 0 ? 1 : -1));
+}, { passive: true });
 
 /* tap the dark, or press space, to summon the next line early */
 document.addEventListener('click', e => {
-  if (!e.target.closest('.unit, header, #walkon, #turnback')) surface();
+  if (!e.target.closest('.unit, header, #walkon')) surface();
 });
 document.addEventListener('keydown', e => {
   if (e.key === ' ' && e.target === document.body) { e.preventDefault(); surface(); }
   if (e.key === 'Escape') { closeAll(); schedule(); }
+  if (e.key === 'ArrowLeft' && page > 0) go(page - 1);
+  if (e.key === 'ArrowRight' && page < PAGES.length - 1) go(page + 1);
 });
 
+history.replaceState(null, '', '#p' + (page + 1));
+localStorage.setItem(MAXKEY, maxPage);
 renderPage();
 </script>
 </body>
