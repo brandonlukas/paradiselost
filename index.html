@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14120f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Paradise Lost · Book I</title>
+<style>
+  :root {
+    --bg: #14120f;
+    --ink: #e6decf;
+    --dim: #8a8172;
+    --warm: #c9a35f;
+    --deep-bg: #1c1915;
+  }
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+    font-size: 1.15rem;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  main {
+    max-width: 36rem;
+    margin: 0 auto;
+    padding: 14vh 1.5rem 30vh;
+  }
+  header { margin-bottom: 5rem; text-align: center; }
+  header h1 {
+    font-size: 1.05rem;
+    font-weight: normal;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  header p {
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    color: var(--dim);
+    opacity: 0.7;
+  }
+
+  .para + .para { margin-top: 1.35rem; }
+
+  .unit { position: relative; opacity: 0; }
+  .unit.surfaced { opacity: 1; transition: opacity 2s ease; }
+
+  .line {
+    position: relative;
+    padding: 0.1rem 0.6rem 0.1rem 2.4em;
+    text-indent: -1.8em;
+    border-radius: 3px;
+    cursor: default;
+    outline: none;
+    transition: background 0.6s ease 0s, color 0.6s ease 0s;
+  }
+  .line.notable { cursor: pointer; }
+  /* the pause: warmth arrives only if you linger */
+  .line.notable:hover, .line.notable:focus-visible {
+    background: rgba(201, 163, 95, 0.07);
+    color: #f2ecdd;
+    transition-delay: 0.35s;
+  }
+  .unit.open .line {
+    background: rgba(201, 163, 95, 0.09);
+    color: #f6f0e1;
+    transition-delay: 0s;
+  }
+  /* line numbers, every fifth, only visible on hover of the page column */
+  .line[data-n]::after {
+    content: attr(data-n);
+    position: absolute;
+    right: -3rem;
+    top: 0.15rem;
+    font-size: 0.7rem;
+    color: var(--dim);
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    text-indent: 0;
+  }
+  main:hover .line[data-n]::after { opacity: 0.45; }
+
+  /* the bloom */
+  .bloom {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .unit.open .bloom { grid-template-rows: 1fr; }
+  .bloom > div { overflow: hidden; }
+  .bloom-inner {
+    margin: 0.9rem 0 1.4rem 2.4em;
+    padding: 0 0 0 1.1rem;
+    border-left: 1px solid rgba(201, 163, 95, 0.35);
+    font-size: 0.92rem;
+    line-height: 1.65;
+    color: #c9c0ae;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s;
+  }
+  .unit.open .bloom-inner { opacity: 1; transform: none; }
+
+  .sense { font-style: italic; }
+  .gloss { margin-top: 0.55rem; }
+  .gloss span.w {
+    color: var(--warm);
+    font-variant: small-caps;
+    letter-spacing: 0.04em;
+  }
+  .gloss div { margin-top: 0.15rem; }
+
+  .descend {
+    margin-top: 0.8rem;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-size: 0.8rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--warm);
+    opacity: 0.65;
+    cursor: pointer;
+  }
+  .descend:hover { opacity: 1; }
+
+  .deep {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .unit.deep-open .deep { grid-template-rows: 1fr; }
+  .deep > div { overflow: hidden; }
+  .deep-inner {
+    margin-top: 0.9rem;
+    padding: 0.9rem 1rem;
+    background: var(--deep-bg);
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.5s ease 0.2s;
+  }
+  .unit.deep-open .deep-inner { opacity: 1; }
+  .deep-inner p + p { margin-top: 0.6rem; }
+
+  /* the end of the page */
+  #walkon {
+    margin-top: 6rem;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 2.5s ease 1s;
+  }
+  #walkon.shown { opacity: 1; pointer-events: auto; }
+  #walkon button {
+    background: none;
+    border: none;
+    padding: 0.4rem 1rem;
+    font: inherit;
+    font-size: 0.85rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--warm);
+    opacity: 0.7;
+    cursor: pointer;
+  }
+  #walkon button:hover { opacity: 1; }
+  #walkon .fin { font-size: 0.85rem; letter-spacing: 0.15em; color: var(--dim); }
+  #turnback {
+    position: fixed;
+    top: 1.2rem;
+    left: 1.4rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--dim);
+    background: none;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.4s;
+  }
+  #turnback:hover { opacity: 0.9; }
+  #turnback[hidden] { display: none; }
+</style>
+</head>
+<body>
+<button id="turnback" hidden>‹ turn back</button>
+<main>
+  <header>
+    <h1>Paradise Lost</h1>
+    <p id="where"></p>
+  </header>
+  <div id="verse"></div>
+  <div id="walkon"></div>
+</main>
+
+<script src="book1.js"></script>
+<script>
+/* annotations, keyed by Book I line number — grows page by page */
+const NOTES = {
+  1: {
+    s: "The poem names its subject before anything else: humanity's first act of disobedience — and what grew from it.",
+    g: [["fruit", "both the apple itself and its consequences — the first of the poem's countless double meanings"]],
+    d: [
+      "Every classical epic opens by announcing its theme in the first word or phrase: Homer's Iliad begins with <i>wrath</i>, the Odyssey with <i>the man</i>, Virgil's Aeneid with <i>arms and the man</i>. Milton answers them with <i>Man's first disobedience</i> — not a hero's deed but a failure, announcing that this epic will be about something none of theirs could touch.",
+      "Notice too what's missing: a main verb. The sentence that starts here won't reach its verb until line 6. Milton suspends the grammar the way Latin poetry does, forcing you to hold the whole falling world in your head before you're told what to do with it — <i>sing</i>."
+    ]
+  },
+  2: {
+    s: "The tree of the knowledge of good and evil, whose taste brought death.",
+    g: [["mortal", "death-bringing, fatal — not merely 'human'"]],
+    d: [
+      "The adjective is displaced: the taste isn't mortal, the tasters became mortal by it. This is a transferred epithet, a signature move of Virgil's that Milton uses constantly — the syntax itself enacts how one act contaminates everything around it."
+    ]
+  },
+  3: {
+    s: "That single taste introduced death — and every sorrow since.",
+    g: [["our", "the narrator includes himself, and you"]],
+    d: [
+      "The quiet word here is <i>our</i>. Milton and his reader are inside this story: we are fallen readers reading about how we fell. The poem never lets you be a spectator — the woe on this line is the reason the poem needs to exist at all."
+    ]
+  },
+  4: {
+    s: "Paradise was lost — until a greater Man restores it.",
+    g: [["one greater Man", "Christ, the 'second Adam'"]],
+    d: [
+      "St. Paul called Christ the second Adam: 'as in Adam all die, even so in Christ shall all be made alive' (1 Corinthians 15:22). Milton compresses the entire arc of Christian history — fall and redemption, the whole plot of his poem and its sequel — into a single subordinate clause before the sentence has even found its verb."
+    ]
+  },
+  5: {
+    s: "…and win back the blessed dwelling-place for us.",
+    g: [["seat", "dwelling-place, home — not a chair"]],
+    d: [
+      "<i>Regain</i> is a word from war and conquest. Five lines in, the poem has already promised its ending: loss is not the final word. Paradise Lost is a tragedy wrapped inside a larger comedy — Milton would later write the sequel, Paradise Regained, out of this very line."
+    ]
+  },
+  6: {
+    s: "At last, the verb: Sing. The poet commands his Muse — but a heavenly one.",
+    g: [["secret", "set apart, hidden (Latin secretus) — not 'confidential'"]],
+    d: [
+      "Six lines of suspended grammar resolve into a single imperative. Homer opened with 'Sing, goddess' — Milton delays the same word to line 6 and then aims it upward, past the nine Muses of Greek myth, at a <i>Heavenly</i> Muse: the spirit that inspired Moses and the prophets. He is claiming that his source of inspiration outranks Homer's.",
+      "This is the poem's boldest running claim: that it is not fiction. Milton presents himself as a prophet taking dictation, not an author inventing."
+    ]
+  },
+  7: {
+    s: "The Muse who inspired Moses on those holy mountains.",
+    g: [["Oreb… Sinai", "Horeb and Sinai — the mountains where God spoke to Moses"]],
+    d: [
+      "Where Greek muses lived on Helicon and Parnassus, Milton's Muse descends on the mountains of Exodus — where Moses saw the burning bush and received the Law. The 'or' is scholarly precision: the Bible uses both names, and Milton, who read scripture in Hebrew, leaves the question open like a good philologist even in mid-invocation."
+    ]
+  },
+  8: {
+    s: "That shepherd is Moses, who first taught Israel.",
+    g: [["that shepherd", "Moses, tending flocks when God called him"], ["chosen seed", "the people of Israel"]],
+    d: [
+      "Moses was traditionally the author of Genesis — the 'first' poet of creation. Milton places himself in a line of succession that runs Moses → the prophets → himself, sidestepping Homer entirely. A blind English poet is claiming the oldest literary pedigree imaginable."
+    ]
+  },
+  9: {
+    s: "…taught how heaven and earth were created.",
+    g: [["In the beginning", "the first words of Genesis, quoted verbatim"]],
+    d: [
+      "Milton splices the actual opening words of the Bible into his own sentence — his verse absorbs scripture mid-line without a seam. It's a demonstration of the whole poem's method: biblical text is not decoration here, it is load-bearing material."
+    ]
+  },
+  10: {
+    s: "Creation rising from Chaos — or, if the Muse prefers Jerusalem…",
+    g: [["Chaos", "the formless deep before creation"], ["Sion hill", "Mount Zion, the temple mount in Jerusalem"]],
+    d: [
+      "<i>Chaos</i> is a Greek word — Hesiod's name for the yawning void before the gods. Genesis says the earth was 'without form.' Milton fuses the two cosmologies in a single phrase, and later in this poem Chaos will be an actual place his Satan must cross — a churning, neutral wilderness between Hell and the created world."
+    ]
+  },
+  11: {
+    s: "…or the waters of Siloam beside the temple.",
+    g: [["Siloa's brook", "the pool of Siloam in Jerusalem"]],
+    d: [
+      "The classical muses had their sacred springs on Helicon; Milton counters with Siloam. But there's a private sting: Siloam is where Jesus sent a man born blind to wash, and the man returned seeing (John 9). The blind poet chooses, of all biblical waters, the one associated with the healing of blindness. He never says so. He just lets it flow past."
+    ]
+  },
+  12: {
+    s: "Close beside God's temple — from there I summon my aid.",
+    g: [["fast by", "close beside"], ["oracle of God", "the temple in Jerusalem — a true oracle, against Delphi's false one"]],
+    d: [
+      "Pagan antiquity had its oracles — Delphi above all, where Apollo spoke riddles. Milton pointedly relocates the word to the Jerusalem temple, where (in his view) God actually spoke. Throughout the poem, pagan religion is treated as a distorted memory of true revelation — the fallen angels themselves will turn out to be the 'gods' of the heathen world."
+    ]
+  },
+  13: {
+    s: "I ask your help for this daring song.",
+    g: [["adventurous", "venturing, full of risk — closer to 'perilous' than 'exciting'"]],
+    d: [
+      "Milton knows exactly how dangerous his project is: he will write speeches for God, stage debates in Hell, narrate the inside of Satan's mind. <i>Adventurous</i> admits the risk of presumption — the very sin the poem is about. The poet asking to soar is uncomfortably close to the angel who fell for aspiring too high, and Milton knows you'll notice."
+    ]
+  },
+  14: {
+    s: "This song will not fly at a modest height.",
+    g: [["middle flight", "a safe, moderate course — what Icarus was told to keep"]],
+    d: [
+      "Daedalus warned Icarus to fly the middle course — neither too low nor too high. Milton refuses the warning outright. For a poem whose villain falls from the ultimate height, announcing 'no middle flight' is either supreme confidence or supreme irony, and Milton means you to feel both at once."
+    ]
+  },
+  15: {
+    s: "…but above Mount Helicon itself, home of the classical Muses.",
+    g: [["Aonian mount", "Helicon, sacred to the nine Muses of Greek poetry"]],
+    d: [
+      "This is the challenge made explicit: to soar <i>above</i> the mountain of Homer and Virgil's muses is to claim his poem will surpass the Iliad and the Aeneid. No English poet had ever said this out loud. Blind, defeated politically, his cause crushed at the Restoration, Milton opens by declaring he will outdo the greatest poems ever written."
+    ]
+  },
+  16: {
+    s: "A subject no one has ever attempted.",
+    g: [["rhyme", "verse — pointed, since Milton refuses actual rhyme"]],
+    d: [
+      "The most famous boast of originality in English — and it's borrowed. Ariosto's Orlando Furioso promised 'cosa non detta in prosa mai né in rima': a thing never said in prose or rhyme. Milton lifts the line nearly verbatim to claim unprecedented originality. Scholars still argue about whether that's a joke, a challenge, or both.",
+      "And <i>rhyme</i> carries a barb: Milton prefaced the poem with an attack on rhyme itself as 'the invention of a barbarous age.' Paradise Lost is in blank verse — these lines have been refusing to rhyme at you all along."
+    ]
+  },
+  17: {
+    s: "Above all, he turns from the Muse to the Spirit of God itself.",
+    g: [["Spirit", "the Holy Spirit — the invocation ascends past the Muse"]],
+    d: [
+      "The invocation climbs: having summoned the Heavenly Muse, Milton now goes over its head to the Spirit that moved at creation. No epic poet had dared address the third person of the Trinity as his source. If the poem is dictated by this Spirit, then Paradise Lost is — by its own account — something very close to scripture."
+    ]
+  },
+  18: {
+    s: "…a Spirit that prefers an honest heart to any temple.",
+    g: [],
+    d: [
+      "Pure Protestant theology in one line: God dwells not in buildings but in believers — 'ye are the temple of God' (1 Corinthians 3:16). Milton, who spent his prose career attacking bishops and state churches, plants his anti-institutional creed right inside the invocation. The upright heart is also a quiet self-description: the blind poet offering the only temple he has."
+    ]
+  },
+  19: {
+    s: "Teach me — you were there from the beginning.",
+    g: [],
+    d: [
+      "The tone drops from command to petition: <i>instruct me</i>. Homer asked the Muse for the story; Milton asks to be taught, like a pupil — or corrected, like a prophet. The half-line 'for thou know'st' is almost conversational, a blind man speaking to the presence he depends on."
+    ]
+  },
+  20: {
+    s: "Present at creation, wings spread wide…",
+    g: [],
+    d: [
+      "The Spirit becomes a great bird over the primal waters. Milton is reaching for Genesis 1:2 — 'the Spirit of God moved upon the face of the waters' — but through the Hebrew verb behind 'moved,' which can mean to hover or flutter, as a bird over its nest. His Hebrew scholarship is about to surface in the next line's astonishing verb."
+    ]
+  },
+  21: {
+    s: "…brooding like a dove over the formless deep.",
+    g: [["brooding", "sitting on eggs to hatch them — warming the void into life"], ["Abyss", "the bottomless deep before creation"]],
+    d: [
+      "<i>Brooding</i> is the most celebrated verb in the invocation: creation imagined as incubation, the universe hatched like an egg under a warm bird. The dove is also the form the Spirit took at Christ's baptism — one image binding creation to redemption.",
+      "This is the line to hear aloud: the long, slow vowels of 'Dove-like sat'st brooding on the vast Abyss' force the voice to settle and hover, exactly like the bird it describes. The meter broods."
+    ]
+  },
+  22: {
+    s: "Made the void fertile — now the poet turns to his own darkness.",
+    g: [],
+    d: [
+      "The colon in this line is one of the great pivots in English poetry. Before it: the creation of the universe. After it: a blind man asking for help. <i>What in me is dark</i> — Milton has been completely blind for years, composing these lines at night in his head, and here the cosmic and the personal fuse. He is asking the Spirit that lit the universe to light him."
+    ]
+  },
+  23: {
+    s: "Give light to my darkness; lift what is weak in me.",
+    g: [],
+    d: [
+      "A double petition shaped like the creation itself: light where there was darkness, raising where there was formlessness. Milton asks to be re-created as the world was created. The inner light he prays for is the poem's answer to his blindness — later, in Book III, he will address light itself in the most personal passage he ever wrote."
+    ]
+  },
+  24: {
+    s: "So that, rising to the height of this great theme…",
+    g: [["argument", "subject, theme (Latin argumentum) — not a quarrel"]],
+    d: [
+      "<i>Height</i> again — the invocation is obsessed with altitude: soaring, no middle flight, above the Aonian mount, what is low raised up. In a poem about the highest angel falling to the lowest deep, every vertical word is charged. Milton wants to rise to the height of his subject without falling the way his own Satan does."
+    ]
+  },
+  25: {
+    s: "…I may defend God's eternal design.",
+    g: [["assert", "affirm and defend — vindicate, not merely state"]],
+    d: [
+      "<i>Providence</i> is the poem's answer to every horror it will show you: that God's design holds even through rebellion, fall, and death. <i>Assert</i> is a lawyer's word — Milton, the great pamphleteer who defended regicide before all of Europe, takes on one final case, with God as his client."
+    ]
+  },
+  26: {
+    s: "The poem's stated purpose: to justify God's ways to men.",
+    g: [["justify", "show to be just — a legal and theological claim"]],
+    d: [
+      "The most audacious final clause in English literature. 'Theodicy' — the defense of God's justice against the evidence of evil — wasn't even a word yet (Leibniz coined it decades later); Milton states the project in plain English and spends twelve books attempting it.",
+      "The line echoed for centuries. Pope softened it: 'vindicate the ways of God to man.' Housman weaponized it: 'malt does more than Milton can / To justify God's ways to man.' Whether the poem succeeds in its stated purpose — or whether Satan runs away with it — is the argument readers have been having since 1667."
+    ]
+  },
+
+  /* ---- page 2 · lines 27–49 ---- */
+  27: {
+    s: "Now the questions begin: nothing is hidden from the Muse, in Heaven…",
+    g: [],
+    d: [
+      "This is the epic question — another inherited convention. Homer asks the Muse which god set Achilles and Agamemnon quarrelling; Virgil asks why Juno hounded a good man. The poet poses the question so the Muse's answer can start the story. Milton's version asks about the origin of every human sorrow at once."
+    ]
+  },
+  28: {
+    s: "…nor even in the deep reaches of Hell — so say what cause…",
+    g: [["tract", "region, expanse"]],
+    d: [
+      "A quiet permission slip for everything ahead: the Muse has seen Hell too, so the poem may narrate it. Milton is about to spend two entire books among devils, and this half-line is his warrant."
+    ]
+  },
+  29: {
+    s: "…moved our first parents, in their happy state…",
+    g: [["grand parents", "first ancestors — Adam and Eve, not grandparents"]]
+  },
+  30: {
+    s: "…so highly favoured by Heaven, to fall away…",
+    g: []
+  },
+  31: {
+    s: "…from their Creator and break his will…",
+    g: []
+  },
+  32: {
+    s: "…over a single restriction — they who were lords of all the world besides.",
+    g: [],
+    d: [
+      "The crux of the whole poem stated as arithmetic: one rule, against dominion over everything else. Whether 'one restraint' was a small thing to honor or the hinge of all freedom is exactly what the poem will spend twelve books weighing."
+    ]
+  },
+  33: {
+    s: "Who first tempted them into that foul rebellion?",
+    g: [],
+    d: [
+      "The epic question sharpens to a whodunnit — and the poem will answer it in the very next line. Milton doesn't want suspense about <i>who</i>; all his suspense lives in <i>how</i> and <i>why</i>."
+    ]
+  },
+  34: {
+    s: "The answer: the infernal Serpent. His guile did it…",
+    g: [["guile", "cunning deceit"]],
+    d: [
+      "Homer asks 'which of the gods?' and answers 'Apollo.' Milton asks and answers with the Serpent — the poem's camera finds its central figure for the first time, and finds him by his lowest name: not archangel, not adversary, but the snake he will end as."
+    ]
+  },
+  35: {
+    s: "…provoked by envy and revenge, he deceived…",
+    g: [["stirred up", "incited, goaded"]]
+  },
+  36: {
+    s: "…Eve — back at the time when his pride…",
+    g: [["the mother of mankind", "Eve"], ["what time", "at the time when"]],
+    d: [
+      "With 'what time,' the poem starts rewinding: from the Fall in Eden back to the war in Heaven. Paradise Lost, like the Odyssey and Aeneid, begins in the middle of things — <i>in medias res</i> — and here it begins the long swim backward to the causes."
+    ]
+  },
+  37: {
+    s: "…had gotten him cast out of Heaven, with all his army…",
+    g: [["host", "army"]]
+  },
+  38: {
+    s: "…of rebel angels — by whose help he aspired…",
+    g: []
+  },
+  39: {
+    s: "…to set himself in glory above his equals…",
+    g: [["peers", "equals — the other angels of his rank"]]
+  },
+  40: {
+    s: "…trusting he could make himself the equal of God most high…",
+    g: [],
+    d: [
+      "'Trusted to have equalled' — Satan's whole tragedy compressed into a verb tense: a hope already dead before the sentence ends. Behind it stands Isaiah 14, the taproot of the entire Lucifer legend: 'I will ascend above the heights of the clouds; I will be like the Most High.'"
+    ]
+  },
+  41: {
+    s: "…if God resisted him; and with ambitious aim…",
+    g: [["opposed", "resisted, stood against him"]]
+  },
+  42: {
+    s: "…against the throne and sole kingship of God…",
+    g: [["monarchy", "sole rule — a loaded word from this poet"]],
+    d: [
+      "A charged word from England's most famous republican. Milton defended the execution of a king before all of Europe — and his God is a monarch, while the rebel against that monarch gets the poem's best speeches. Readers have argued about what Milton is doing here since 1667; the poem never once makes it easy."
+    ]
+  },
+  43: {
+    s: "…raised unholy war in Heaven and proud battle…",
+    g: [["impious", "against the divine"]]
+  },
+  44: {
+    s: "…in vain. Him the Almighty Power —",
+    g: [],
+    d: [
+      "Mid-line, the sentence turns and the fall begins. 'Him' is slammed to the front of its clause — the object before its verb, pure Latin word order — so that Satan sits grammatically underneath the Power about to throw him. The syntax does the throwing before the verb arrives."
+    ]
+  },
+  45: {
+    s: "…hurled headlong, burning, out of the sky of Heaven…",
+    g: [["ethereal", "of the ether, the pure upper element — Heaven's substance"]],
+    d: [
+      "Listen to the meter: iambic pentameter promises a rising step, da-<i>dum</i> — and this line opens with a hammer blow where the unstressed beat should be. <i>Hurled.</i> The verse falls headfirst along with the angel. When Milton breaks his own meter, it is never an accident."
+    ]
+  },
+  46: {
+    s: "…with monstrous destruction and conflagration, down…",
+    g: [["ruin", "literally 'a falling' (Latin ruina)"], ["combustion", "burning up"]],
+    d: [
+      "'Ruin' still carried its Latin sense — a falling. The word itself falls. Milton's Latinate vocabulary constantly plays this game: the English meaning on the surface, the older literal sense moving underneath."
+    ]
+  },
+  47: {
+    s: "…to bottomless damnation, there to dwell…",
+    g: [["perdition", "utter loss, damnation"]]
+  },
+  48: {
+    s: "…in unbreakable chains and punishing fire…",
+    g: [["adamantine", "made of adamant, the unbreakable stone of legend"], ["penal", "of punishment"]]
+  },
+  49: {
+    s: "…he who had dared defy the Almighty in war.",
+    g: [["durst", "dared"]],
+    d: [
+      "Lines 44–49 are one sentence, one long fall: six lines of violence with no place to rest, ending on 'arms.' Try reading it aloud in a single breath — you run out of air at about the place the sky runs out. Then the full stop lands like the floor of Hell."
+    ]
+  },
+
+  /* ---- page 3 · lines 50–83 ---- */
+  50: {
+    s: "For nine days and nights, as mortals measure time…",
+    g: [],
+    d: [
+      "Exactly the span Hesiod gives the fall of the Titans: a bronze anvil dropped from Olympus would fall nine days before reaching Tartarus. Milton measures his Christian Hell with a pagan yardstick on purpose — the war of the Titans is one of his models, and he wants you to notice his fall outranks theirs."
+    ]
+  },
+  51: {
+    s: "…he, with his horrid crew…",
+    g: [["crew", "a contemptuous word — a gang, not an army"]]
+  },
+  52: {
+    s: "…lay defeated, rolling in the lake of fire…",
+    g: [["gulf", "deep abyss — here, the burning lake"]]
+  },
+  53: {
+    s: "…stunned, though immortal. But his sentence…",
+    g: [["confounded", "overwhelmed, stunned"], ["doom", "judgment, sentence — not 'death'"]],
+    d: [
+      "'Confounded, though immortal' — the horror of Hell in three words: beings who cannot die, in a place designed to be unsurvivable. Immortality, the angels' glory, becomes the mechanism of their punishment."
+    ]
+  },
+  54: {
+    s: "…preserved him for greater anger still; for now the thought…",
+    g: []
+  },
+  55: {
+    s: "…of happiness lost and pain that will not end…",
+    g: []
+  },
+  56: {
+    s: "…torments him. He casts his baleful eyes around…",
+    g: [["baleful", "full of evil — and full of misery; the word cuts both ways"]]
+  },
+  57: {
+    s: "…eyes that showed enormous suffering and dismay…",
+    g: [["witnessed", "bore witness to, displayed"]]
+  },
+  58: {
+    s: "…mixed with hardened pride and unbending hate.",
+    g: [["obdurate", "hardened — literally like tempered metal"]],
+    d: [
+      "Satan's entire psychology in one balanced line: half agony, half defiance, joined by 'mixed.' Every argument about his character since 1667 — tragic hero or self-deceiving tyrant — is an argument about which half of this line is the real one."
+    ]
+  },
+  59: {
+    s: "All at once, as far as angels can see, he views…",
+    g: [["ken", "range of sight"]]
+  },
+  60: {
+    s: "…the dismal scene, desolate and wild:",
+    g: [["situation", "site, place — not 'circumstances'"]]
+  },
+  61: {
+    s: "…a horrible dungeon, flaming on every side…",
+    g: []
+  },
+  62: {
+    s: "…like one great furnace — yet from those flames…",
+    g: []
+  },
+  63: {
+    s: "…came no light, but rather darkness visible…",
+    g: [],
+    d: [
+      "The most famous oxymoron in English poetry. Fire that sheds darkness instead of light — physically impossible, imaginatively exact: Hell's flames reveal only what you would rather not see. Edmund Burke pointed to this line as the very essence of the sublime; three centuries of readers have glossed it and no paraphrase has ever exhausted it.",
+      "Hold it next to the invocation you read yesterday: the poet who asked 'what in me is dark / Illumine' now builds a place lit by dark itself. Light and darkness are the poem's deepest vocabulary, and this line is where they fuse."
+    ]
+  },
+  64: {
+    s: "…which served only to reveal sights of misery…",
+    g: [["discover", "reveal, uncover"]]
+  },
+  65: {
+    s: "…lands of sorrow, mournful shadows, where peace…",
+    g: [["shades", "shadows — with a whisper of 'ghosts'"]]
+  },
+  66: {
+    s: "…and rest can never live, where hope never comes…",
+    g: []
+  },
+  67: {
+    s: "…though hope comes to everyone else — only endless torture…",
+    g: [],
+    d: [
+      "Over the gate of Dante's Hell: <i>abandon all hope, you who enter</i>. Milton folds the inscription into the landscape itself — hope 'that comes to all' is the ordinary birthright of every living thing, revoked here alone. And notice the line break: for half a second at the end of the previous line, 'hope never comes' hangs complete — then this line opens and takes even that away."
+    ]
+  },
+  68: {
+    s: "…forever pressing in, and a flood of fire, fed…",
+    g: [["urges", "presses upon, afflicts"]]
+  },
+  69: {
+    s: "…with sulphur that burns forever and is never used up.",
+    g: [["unconsumed", "never burnt away — the fuel never spends itself"]],
+    d: [
+      "From Revelation's lake 'of fire and brimstone.' The physics of Hell runs on paradox: flames without light two lines ago, now fuel without consumption. Milton builds the place out of broken natural law — Hell is where creation's rules are suspended, in the worst possible way."
+    ]
+  },
+  70: {
+    s: "Such is the place Eternal Justice had prepared…",
+    g: []
+  },
+  71: {
+    s: "…for the rebels; here their prison, ordained…",
+    g: []
+  },
+  72: {
+    s: "…in absolute darkness, and their allotted share set…",
+    g: [["portion", "allotted share — an inheritance word; damnation as bitter bequest"]]
+  },
+  73: {
+    s: "…as far removed from God and Heaven's light…",
+    g: []
+  },
+  74: {
+    s: "…as three times the distance from the centre of the universe to its outermost edge.",
+    g: [["utmost pole", "the outer shell of the Ptolemaic universe"]],
+    d: [
+      "A unit of measurement invented on the spot: the radius of the entire created universe, tripled. The number sounds exact and means only 'farther than thought can go.' This precision about the immeasurable is one of Milton's signature effects — he will later give you the architecture of Hell, the geography of Chaos, the mileage of the cosmos, all with a surveyor's confidence about places off every map."
+    ]
+  },
+  75: {
+    s: "Oh how unlike the place they fell from!",
+    g: [],
+    d: [
+      "The narrator's own cry — one of the rare places the epic voice breaks into open lament. Ten plain monosyllables (but one), and the whole distance between Heaven and Hell held inside an exclamation. Even the poem can't stay detached."
+    ]
+  },
+  76: {
+    s: "There he soon makes out the companions of his fall, buried…",
+    g: [["o'erwhelmed", "literally 'buried under' — overwhelmed by the storm"]]
+  },
+  77: {
+    s: "…under floods and whirlwinds of raging fire…",
+    g: [["tempestuous", "storming, raging"]]
+  },
+  78: {
+    s: "…and thrashing beside him in the waves…",
+    g: [["weltering", "rolling, wallowing — a body tossed in waves"]]
+  },
+  79: {
+    s: "…one second to himself in power, and second in crime…",
+    g: [],
+    d: [
+      "Rank in Hell is measured in two currencies at once — power and crime — and the line's balance prices them as equivalent. In this economy, wickedness is seniority."
+    ]
+  },
+  80: {
+    s: "…known long afterward in Palestine, and named…",
+    g: [],
+    d: [
+      "'Long after known' — the poem's great time-trick, used here for the first time. The fallen angels don't have their famous names yet; the names we know them by belong to the idols they will later become among fallen nations. Watch for this throughout Book I: every demon is a future false god, named in advance by the ruin he will cause."
+    ]
+  },
+  81: {
+    s: "…Beelzebub. To him the Arch-Enemy…",
+    g: [["Beelzebub", "'lord of the flies' (Hebrew ba'al zevuv) — a Philistine god demoted to a devil; in the Gospels, 'prince of the devils'"]]
+  },
+  82: {
+    s: "…called Satan in Heaven for that reason, with bold words…",
+    g: [["Satan", "Hebrew for 'adversary' — a title that became a name"]],
+    d: [
+      "'Satan' is not a name but a job description: the Adversary, the Accuser. Heaven will not use his old name — tradition says Lucifer, light-bearer — because that angel no longer exists. The poem is strict about this everywhere: fallen, he is called only what he does."
+    ]
+  },
+  83: {
+    s: "…breaking the horrid silence, began to speak:",
+    g: [],
+    d: [
+      "Eighty-three lines of held breath — invocation, question, fall, landscape — and now the poem hands the microphone to Satan. What follows is the beginning of its oldest controversy: the devil gets the best lines, and readers from Blake ('Milton was of the Devil's party without knowing it') to the present have argued about whether that eloquence is the poem's flaw or its deepest design. Tomorrow: the first speech."
+    ]
+  }
+};
+
+const verse = document.getElementById('verse');
+const walkon = document.getElementById('walkon');
+const turnback = document.getElementById('turnback');
+const where = document.getElementById('where');
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PACE = 2200;
+const KEY = 'pl-book1-page';
+
+let page = Math.min(parseInt(localStorage.getItem(KEY)) || 0, PAGES.length - 1);
+let units = [], next = 0, timer = null;
+
+function buildUnit(text, abs) {
+  const unit = document.createElement('div');
+  unit.className = 'unit';
+  const p = document.createElement('p');
+  p.className = 'line';
+  p.textContent = text;
+  if (abs % 5 === 0) p.dataset.n = abs;
+  unit.appendChild(p);
+
+  const note = NOTES[abs];
+  if (note) {
+    p.classList.add('notable');
+    p.tabIndex = 0;
+    p.setAttribute('role', 'button');
+    p.setAttribute('aria-expanded', 'false');
+    const bloom = document.createElement('div');
+    bloom.className = 'bloom';
+    const glosses = (note.g || []).map(([w, def]) =>
+      `<div><span class="w">${w}</span> — ${def}</div>`).join('');
+    const deep = (note.d || []).map(para => `<p>${para}</p>`).join('');
+    bloom.innerHTML = `<div><div class="bloom-inner">
+      <div class="sense">${note.s}</div>
+      ${glosses ? `<div class="gloss">${glosses}</div>` : ''}
+      ${deep ? `<button class="descend">go deeper</button>
+      <div class="deep"><div><div class="deep-inner">${deep}</div></div></div>` : ''}
+    </div></div>`;
+    unit.appendChild(bloom);
+
+    const toggle = () => {
+      const wasOpen = unit.classList.contains('open');
+      closeAll();
+      if (!wasOpen) {
+        unit.classList.add('open');
+        p.setAttribute('aria-expanded', 'true');
+      }
+      schedule(); // pause surfacing while a bloom is open, resume on close
+    };
+    p.addEventListener('click', toggle);
+    p.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+    const descend = bloom.querySelector('.descend');
+    if (descend) descend.addEventListener('click', () => {
+      unit.classList.toggle('deep-open');
+      descend.textContent = unit.classList.contains('deep-open') ? 'surface' : 'go deeper';
+    });
+  }
+  return unit;
+}
+
+function closeAll() {
+  document.querySelectorAll('.unit.open').forEach(u => {
+    u.classList.remove('open', 'deep-open');
+    u.querySelector('.line').setAttribute('aria-expanded', 'false');
+  });
+}
+
+function renderPage() {
+  clearTimeout(timer);
+  const pg = PAGES[page];
+  const count = pg.b.reduce((n, b) => n + b.length, 0);
+  where.textContent = `BOOK I · PAGE ${page + 1} OF ${PAGES.length} · LINES ${pg.s}–${pg.s + count - 1}`;
+  turnback.hidden = page === 0;
+
+  verse.innerHTML = '';
+  units = [];
+  let abs = pg.s;
+  pg.b.forEach(block => {
+    const para = document.createElement('div');
+    para.className = 'para';
+    block.forEach(text => {
+      const u = buildUnit(text, abs++);
+      para.appendChild(u);
+      units.push(u);
+    });
+    verse.appendChild(para);
+  });
+
+  walkon.className = '';
+  walkon.innerHTML = page + 1 < PAGES.length
+    ? `<button id="walk-btn">walk on ›</button>`
+    : `<p class="fin">the end of Book I · Book II awaits</p>`;
+  const btn = document.getElementById('walk-btn');
+  if (btn) btn.addEventListener('click', () => go(page + 1));
+
+  next = 0;
+  if (RM) {
+    units.forEach(u => u.classList.add('surfaced'));
+    next = units.length;
+    walkon.classList.add('shown');
+  } else {
+    timer = setTimeout(surface, 1200);
+  }
+}
+
+function go(p) {
+  page = p;
+  localStorage.setItem(KEY, page);
+  scrollTo({ top: 0, behavior: 'auto' });
+  renderPage();
+}
+
+/* ---- surfacing: lines emerge from the dark, one at a time ---- */
+function surface() {
+  if (next >= units.length) return;
+  const u = units[next++];
+  u.classList.add('surfaced');
+  u.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'nearest' });
+  if (next >= units.length) walkon.classList.add('shown');
+  schedule();
+}
+function schedule() {
+  clearTimeout(timer);
+  if (next >= units.length || document.querySelector('.unit.open')) return;
+  timer = setTimeout(surface, PACE);
+}
+
+turnback.addEventListener('click', () => go(page - 1));
+
+/* tap the dark, or press space, to summon the next line early */
+document.addEventListener('click', e => {
+  if (!e.target.closest('.unit, header, #walkon, #turnback')) surface();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === ' ' && e.target === document.body) { e.preventDefault(); surface(); }
+  if (e.key === 'Escape') { closeAll(); schedule(); }
+});
+
+renderPage();
+</script>
+</body>
+</html>

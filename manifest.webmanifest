@@ -1,0 +1,12 @@
+{
+  "name": "Paradise Lost",
+  "short_name": "Paradise",
+  "description": "A daily walk through Milton's Paradise Lost",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#14120f",
+  "theme_color": "#14120f",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
