@@ -49,8 +49,8 @@
 
   .para + .para { margin-top: 1.35rem; }
 
-  .unit { opacity: 0; }
-  .unit.surfaced { opacity: 1; transition: opacity 2s ease; }
+  .unit { opacity: 0; visibility: hidden; }
+  .unit.surfaced { opacity: 1; visibility: visible; transition: opacity 2s ease; }
   @media (prefers-reduced-motion: reduce) {
     .unit.surfaced { transition: none !important; }
   }
