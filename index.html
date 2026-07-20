@@ -128,6 +128,24 @@
 
   .para + .para { margin-top: 1.35rem; }
 
+  .argument {
+    margin-bottom: 2.8rem;
+    font-size: 0.95rem;
+    font-style: italic;
+    color: var(--dim);
+    line-height: 1.75;
+  }
+  .arglabel {
+    display: block;
+    font-style: normal;
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--warm);
+    opacity: 0.7;
+    margin-bottom: 0.8rem;
+  }
+
   .unit { opacity: 0; visibility: hidden; }
   .unit.surfaced { opacity: 1; visibility: visible; transition: opacity 2s ease; }
   @media (prefers-reduced-motion: reduce) {
@@ -8497,6 +8515,13 @@ function renderPage() {
 
   verse.innerHTML = '';
   units = [];
+  if (page === 0 && BOOKS[book].arg) {   // Milton's own prose preface opens each book
+    const a = document.createElement('div');
+    a.className = 'unit argument';
+    a.innerHTML = `<span class="arglabel">The Argument</span>${BOOKS[book].arg}`;
+    verse.appendChild(a);
+    units.push(a);
+  }
   let abs = pg.s;
   pg.b.forEach(block => {
     const para = document.createElement('div');
