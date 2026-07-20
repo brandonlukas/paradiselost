@@ -26,6 +26,7 @@
     font-size: 1.15rem;
     line-height: 1.7;
     -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;
   }
   main {
     max-width: 36rem;
@@ -272,6 +273,7 @@
         <div class="indexfoot">
           <button id="restart">begin again</button>
           <button id="frontier">to the frontier</button>
+          <button id="resetwalk">reset progress</button>
         </div>
       </div></div>
     </div>
@@ -3917,21 +3919,8 @@ function renderPage() {
   prevBtn.disabled = book === 0 && page === 0;
   nextBtn.disabled = book === BOOKS.length - 1 && page === pages.length - 1;
 
-  if (+pagegrid.dataset.book !== book) {   // rebuild grid for this book
-    pagegrid.dataset.book = book;
-    pagegrid.innerHTML = '';
-    for (let i = 0; i < pages.length; i++) {
-      const b = document.createElement('button');
-      b.textContent = i + 1;
-      b.addEventListener('click', () => go(book, i));
-      pagegrid.appendChild(b);
-    }
-  }
-  const walked = i => book < frontier.b || (book === frontier.b && i <= frontier.p);
-  [...pagegrid.children].forEach((b, i) => {
-    b.className = (walked(i) ? 'walked' : '') + (i === page ? ' here' : '');
-  });
-  [...bookrow.children].forEach((b, i) => b.className = i === book ? 'here' : '');
+  viewBook = book;
+  renderGrid();
 
   verse.innerHTML = '';
   units = [];
@@ -3967,10 +3956,28 @@ function renderPage() {
   }
 }
 
-function go(b, p) {
+/* the index grid can preview a book without traveling to it */
+let viewBook = book;
+function renderGrid() {
+  const pages = BOOKS[viewBook].pages;
+  const walked = i => viewBook < frontier.b || (viewBook === frontier.b && i <= frontier.p);
+  pagegrid.innerHTML = '';
+  for (let i = 0; i < pages.length; i++) {
+    const b = document.createElement('button');
+    b.textContent = i + 1;
+    b.className = (walked(i) ? 'walked' : '') + (viewBook === book && i === page ? ' here' : '');
+    b.addEventListener('click', () => go(viewBook, i));
+    pagegrid.appendChild(b);
+  }
+  [...bookrow.children].forEach((b, i) => b.className = i === viewBook ? 'here' : '');
+}
+
+/* `walk` marks real reading progress; jumps and links teleport without claiming it */
+function go(b, p, walk) {
   book = Math.max(0, Math.min(b || 0, BOOKS.length - 1));
   page = Math.max(0, Math.min(p || 0, BOOKS[book].pages.length - 1));
-  if (book > frontier.b || (book === frontier.b && page > frontier.p)) frontier = { b: book, p: page };
+  if (walk && (book > frontier.b || (book === frontier.b && page > frontier.p)))
+    frontier = { b: book, p: page };
   localStorage.setItem('pl-loc', JSON.stringify({ b: book, p: page }));
   localStorage.setItem('pl-frontier', JSON.stringify(frontier));
   history.replaceState(null, '', `#b${book + 1}p${page + 1}`);
@@ -3990,7 +3997,7 @@ function step(dir) {
     if (b === BOOKS.length - 1) return;
     b++; p = 0;
   }
-  go(b, p);
+  go(b, p, true);
 }
 
 /* ---- surfacing: lines emerge from the dark, one at a time ---- */
@@ -4012,7 +4019,7 @@ function schedule() {
 BOOKS.forEach((bk, i) => {
   const b = document.createElement('button');
   b.textContent = 'Book ' + bk.n;
-  b.addEventListener('click', () => go(i, 0));
+  b.addEventListener('click', () => { viewBook = i; renderGrid(); });   // preview, don't travel
   bookrow.appendChild(b);
 });
 const toggleIndex = () => {
@@ -4027,6 +4034,13 @@ prevBtn.addEventListener('click', () => step(-1));
 nextBtn.addEventListener('click', () => step(1));
 document.getElementById('restart').addEventListener('click', () => go(0, 0));
 document.getElementById('frontier').addEventListener('click', () => go(frontier.b, frontier.p));
+document.getElementById('resetwalk').addEventListener('click', () => {
+  if (!confirm('Reset your progress? Your place and every lit page return to the beginning.')) return;
+  frontier = { b: 0, p: 0 };
+  localStorage.removeItem('pl-loc');
+  localStorage.removeItem('pl-frontier');
+  go(0, 0);
+});
 addEventListener('hashchange', () => {
   const h = parseHash();
   if (h && (h.b !== book || h.p !== page)) go(h.b, h.p);
@@ -4042,9 +4056,19 @@ document.addEventListener('touchend', e => {
   if (Math.abs(dx) > 70 && Math.abs(dy) < 50) step(dx < 0 ? 1 : -1);
 }, { passive: true });
 
-/* tap the dark, or press space, to summon the next line early */
+/* tap the dark to summon the next line; double-tap to surface the whole page */
+function surfaceAll() {
+  clearTimeout(timer);
+  units.forEach(u => u.classList.add('surfaced'));
+  next = units.length;
+  walkon.classList.add('shown');
+}
+let lastVoidTap = 0;
 document.addEventListener('click', e => {
-  if (!e.target.closest('.unit, header, #walkon')) surface();
+  if (e.target.closest('.unit, header, #walkon')) return;
+  const now = Date.now();
+  now - lastVoidTap < 350 ? surfaceAll() : surface();
+  lastVoidTap = now;
 });
 document.addEventListener('keydown', e => {
   if (e.key === ' ' && e.target === document.body) { e.preventDefault(); surface(); }
@@ -4054,8 +4078,6 @@ document.addEventListener('keydown', e => {
 });
 
 history.replaceState(null, '', `#b${book + 1}p${page + 1}`);
-if (book > frontier.b || (book === frontier.b && page > frontier.p)) frontier = { b: book, p: page };
-localStorage.setItem('pl-frontier', JSON.stringify(frontier));
 renderPage();
 </script>
 </body>
