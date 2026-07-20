@@ -8525,19 +8525,18 @@ function renderPage() {
 
   verse.innerHTML = '';
   units = [];
-  if (page === 0 && PLATES[book]) {   // the book's frontispiece plate
+  /* plate and Argument are furniture, not verse — present the moment the page loads */
+  if (page === 0 && PLATES[book]) {
     const pl = document.createElement('div');
-    pl.className = 'unit plate';
+    pl.className = 'unit plate surfaced';
     pl.innerHTML = `<img src="${PLATES[book]}" alt="Book ${BOOKS[book].n} plate">`;
     verse.appendChild(pl);
-    units.push(pl);
   }
-  if (page === 0 && BOOKS[book].arg) {   // Milton's own prose preface opens each book
+  if (page === 0 && BOOKS[book].arg) {
     const a = document.createElement('div');
-    a.className = 'unit argument';
+    a.className = 'unit argument surfaced';
     a.innerHTML = `<span class="arglabel">The Argument</span>${BOOKS[book].arg}`;
     verse.appendChild(a);
-    units.push(a);
   }
   let abs = pg.s;
   pg.b.forEach(block => {
