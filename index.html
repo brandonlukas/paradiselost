@@ -8480,6 +8480,7 @@ book = Math.max(0, Math.min(book || 0, BOOKS.length - 1));
 page = Math.max(0, Math.min(page || 0, BOOKS[book].pages.length - 1));
 
 let units = [], next = 0, timer = null;
+let seen = false;   // was this page already visited before this arrival?
 
 function buildUnit(text, abs) {
   const unit = document.createElement('div');
@@ -8599,7 +8600,8 @@ function renderPage() {
   if (btn) btn.addEventListener('click', () => step(1));
 
   next = 0;
-  if (RM || !units.length) {
+  /* the surfacing ritual belongs to first visits; familiar pages appear whole */
+  if (RM || !units.length || seen) {
     units.forEach(u => u.classList.add('surfaced'));
     next = units.length;
     walkon.classList.add('shown');
@@ -8627,6 +8629,7 @@ function renderGrid() {
 function go(b, p) {
   book = Math.max(0, Math.min(b || 0, BOOKS.length - 1));
   page = Math.max(0, Math.min(p || 0, BOOKS[book].pages.length - 1));
+  seen = visited[book].has(page);
   visited[book].add(page);   // every page you open joins your trail
   localStorage.setItem('pl-loc', JSON.stringify({ b: book, p: page }));
   saveVisited();
@@ -8732,6 +8735,7 @@ document.addEventListener('keydown', e => {
 });
 
 history.replaceState(null, '', `#b${book + 1}p${page}`);
+seen = visited[book].has(page);
 visited[book].add(page);
 saveVisited();
 renderPage();
