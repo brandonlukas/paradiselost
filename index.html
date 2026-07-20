@@ -18,6 +18,7 @@
     --deep-bg: #1c1915;
   }
   * { margin: 0; box-sizing: border-box; }
+  html, body { overflow-x: hidden; }
   body {
     background: var(--bg);
     color: var(--ink);
@@ -1221,6 +1222,8 @@ function closeAll() {
   document.querySelectorAll('.unit.open').forEach(u => {
     u.classList.remove('open', 'deep-open');
     u.querySelector('.line').setAttribute('aria-expanded', 'false');
+    const d = u.querySelector('.descend');
+    if (d) d.textContent = 'go deeper';
   });
 }
 
