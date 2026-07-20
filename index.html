@@ -8382,20 +8382,34 @@ const nextBtn = document.getElementById('next');
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PACE = 2200;
 
-let book = 0, page = 0, frontier = { b: 0, p: 0 };
+let book = 0, page = 0;
+let visited = BOOKS.map(() => new Set());   // pages actually opened, per book
 try {
   const l = JSON.parse(localStorage.getItem('pl-loc') || 'null');
-  const f = JSON.parse(localStorage.getItem('pl-frontier') || 'null');
   if (l) { book = l.b; page = l.p; }
-  if (f) frontier = f;
-  if (!l) {  // migrate pre-multi-book storage
-    const old = parseInt(localStorage.getItem('pl-book1-page'));
-    if (!isNaN(old)) {
-      page = old;
-      frontier = { b: 0, p: Math.max(old, parseInt(localStorage.getItem('pl-book1-max')) || 0) };
+  const v = JSON.parse(localStorage.getItem('pl-visited') || 'null');
+  if (v) {
+    visited = BOOKS.map((_, i) => new Set(v[i] || []));
+  } else {
+    // migrate older storage: light the trail up to the old frontier
+    let f = JSON.parse(localStorage.getItem('pl-frontier') || 'null');
+    if (!f && !l) {
+      const old = parseInt(localStorage.getItem('pl-book1-page'));
+      if (!isNaN(old)) {
+        page = old;
+        f = { b: 0, p: Math.max(old, parseInt(localStorage.getItem('pl-book1-max')) || 0) };
+      }
     }
+    if (f) for (let b = 0; b <= Math.min(f.b, BOOKS.length - 1); b++)
+      for (let p = 0; p <= (b === f.b ? f.p : BOOKS[b].pages.length - 1); p++) visited[b].add(p);
   }
 } catch (e) {}
+const saveVisited = () => localStorage.setItem('pl-visited', JSON.stringify(visited.map(s => [...s])));
+const frontierLoc = () => {
+  for (let b = BOOKS.length - 1; b >= 0; b--)
+    if (visited[b].size) return { b, p: Math.max(...visited[b]) };
+  return { b: 0, p: 0 };
+};
 const parseHash = () => {
   let m = location.hash.match(/^#b(\d+)p(\d+)$/);
   if (m) return { b: +m[1] - 1, p: +m[2] - 1 };
@@ -8519,7 +8533,7 @@ function renderPage() {
 let viewBook = book;
 function renderGrid() {
   const pages = BOOKS[viewBook].pages;
-  const walked = i => viewBook < frontier.b || (viewBook === frontier.b && i <= frontier.p);
+  const walked = i => visited[viewBook].has(i);
   pagegrid.innerHTML = '';
   for (let i = 0; i < pages.length; i++) {
     const b = document.createElement('button');
@@ -8531,14 +8545,12 @@ function renderGrid() {
   [...bookrow.children].forEach((b, i) => b.className = i === viewBook ? 'here' : '');
 }
 
-/* `walk` marks real reading progress; jumps and links teleport without claiming it */
-function go(b, p, walk) {
+function go(b, p) {
   book = Math.max(0, Math.min(b || 0, BOOKS.length - 1));
   page = Math.max(0, Math.min(p || 0, BOOKS[book].pages.length - 1));
-  if (walk && (book > frontier.b || (book === frontier.b && page > frontier.p)))
-    frontier = { b: book, p: page };
+  visited[book].add(page);   // every page you open joins your trail
   localStorage.setItem('pl-loc', JSON.stringify({ b: book, p: page }));
-  localStorage.setItem('pl-frontier', JSON.stringify(frontier));
+  saveVisited();
   history.replaceState(null, '', `#b${book + 1}p${page + 1}`);
   pageindex.classList.remove('open');
   where.setAttribute('aria-expanded', 'false');
@@ -8556,7 +8568,7 @@ function step(dir) {
     if (b === BOOKS.length - 1) return;
     b++; p = 0;
   }
-  go(b, p, true);
+  go(b, p);
 }
 
 /* ---- surfacing: lines emerge from the dark, one at a time ---- */
@@ -8592,11 +8604,15 @@ where.addEventListener('keydown', e => {
 prevBtn.addEventListener('click', () => step(-1));
 nextBtn.addEventListener('click', () => step(1));
 document.getElementById('restart').addEventListener('click', () => go(0, 0));
-document.getElementById('frontier').addEventListener('click', () => go(frontier.b, frontier.p));
+document.getElementById('frontier').addEventListener('click', () => {
+  const f = frontierLoc();
+  go(f.b, f.p);
+});
 document.getElementById('resetwalk').addEventListener('click', () => {
   if (!confirm('Reset your progress? Your place and every lit page return to the beginning.')) return;
-  frontier = { b: 0, p: 0 };
+  visited = BOOKS.map(() => new Set());
   localStorage.removeItem('pl-loc');
+  localStorage.removeItem('pl-visited');
   localStorage.removeItem('pl-frontier');
   go(0, 0);
 });
@@ -8637,6 +8653,8 @@ document.addEventListener('keydown', e => {
 });
 
 history.replaceState(null, '', `#b${book + 1}p${page + 1}`);
+visited[book].add(page);
+saveVisited();
 renderPage();
 </script>
 </body>
