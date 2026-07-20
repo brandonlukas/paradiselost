@@ -51,6 +51,9 @@
 
   .unit { position: relative; opacity: 0; }
   .unit.surfaced { opacity: 1; transition: opacity 2s ease; }
+  @media (prefers-reduced-motion: reduce) {
+    .unit.surfaced { transition: none !important; }
+  }
 
   .line {
     position: relative;
@@ -819,7 +822,7 @@ function surface() {
   if (next >= units.length) return;
   const u = units[next++];
   u.classList.add('surfaced');
-  u.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'nearest' });
+  u.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   if (next >= units.length) walkon.classList.add('shown');
   schedule();
 }
