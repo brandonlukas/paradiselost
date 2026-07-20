@@ -8398,6 +8398,8 @@ const NOTES2 = {
 
 const NOTES_BY_BOOK = [NOTES, NOTES2];
 const PLATES = ['plates/book-1.jpg'];   // frontispieces, added as they're painted
+/* every book opens with a cover page: plate + Argument; verse pages are 1..N */
+BOOKS.forEach(bk => bk.pages.unshift({ cover: true }));
 
 const verse = document.getElementById('verse');
 const walkon = document.getElementById('walkon');
@@ -8432,6 +8434,14 @@ try {
       for (let p = 0; p <= (b === f.b ? f.p : BOOKS[b].pages.length - 1); p++) visited[b].add(p);
   }
 } catch (e) {}
+/* v2: cover pages shifted verse pages up by one — migrate stored positions once */
+if (!localStorage.getItem('pl-v2')) {
+  if (localStorage.getItem('pl-loc') || localStorage.getItem('pl-visited') || localStorage.getItem('pl-book1-page')) {
+    page += 1;
+    visited = visited.map(s => new Set([...s].map(p => p + 1)));
+  }
+  localStorage.setItem('pl-v2', '1');
+}
 const saveVisited = () => localStorage.setItem('pl-visited', JSON.stringify(visited.map(s => [...s])));
 const frontierLoc = () => {
   for (let b = BOOKS.length - 1; b >= 0; b--)
@@ -8440,9 +8450,9 @@ const frontierLoc = () => {
 };
 const parseHash = () => {
   let m = location.hash.match(/^#b(\d+)p(\d+)$/);
-  if (m) return { b: +m[1] - 1, p: +m[2] - 1 };
-  m = location.hash.match(/^#p(\d+)$/);   // legacy Book I links
-  if (m) return { b: 0, p: +m[1] - 1 };
+  if (m) return { b: +m[1] - 1, p: +m[2] };   // p0 = cover, pN = verse page N
+  m = location.hash.match(/^#p(\d+)$/);       // legacy Book I links
+  if (m) return { b: 0, p: +m[1] };
   return null;
 };
 const h = parseHash();
@@ -8515,8 +8525,12 @@ function renderPage() {
   clearTimeout(timer);
   const pages = BOOKS[book].pages;
   const pg = pages[page];
-  const count = pg.b.reduce((n, b) => n + b.length, 0);
-  where.textContent = `BOOK ${BOOKS[book].n} · PAGE ${page + 1} OF ${pages.length} · LINES ${pg.s}–${pg.s + count - 1}`;
+  if (pg.cover) {
+    where.textContent = `BOOK ${BOOKS[book].n} · THE ARGUMENT`;
+  } else {
+    const count = pg.b.reduce((n, b) => n + b.length, 0);
+    where.textContent = `BOOK ${BOOKS[book].n} · PAGE ${page} OF ${pages.length - 1} · LINES ${pg.s}–${pg.s + count - 1}`;
+  }
   prevBtn.disabled = book === 0 && page === 0;
   nextBtn.disabled = book === BOOKS.length - 1 && page === pages.length - 1;
 
@@ -8525,30 +8539,32 @@ function renderPage() {
 
   verse.innerHTML = '';
   units = [];
-  /* plate and Argument are furniture, not verse — present the moment the page loads */
-  if (page === 0 && PLATES[book]) {
-    const pl = document.createElement('div');
-    pl.className = 'unit plate surfaced';
-    pl.innerHTML = `<img src="${PLATES[book]}" alt="Book ${BOOKS[book].n} plate">`;
-    verse.appendChild(pl);
-  }
-  if (page === 0 && BOOKS[book].arg) {
-    const a = document.createElement('div');
-    a.className = 'unit argument surfaced';
-    a.innerHTML = `<span class="arglabel">The Argument</span>${BOOKS[book].arg}`;
-    verse.appendChild(a);
-  }
-  let abs = pg.s;
-  pg.b.forEach(block => {
-    const para = document.createElement('div');
-    para.className = 'para';
-    block.forEach(text => {
-      const u = buildUnit(text, abs++);
-      para.appendChild(u);
-      units.push(u);
+  if (pg.cover) {   // the threshold page: plate and Argument, present at once
+    if (PLATES[book]) {
+      const pl = document.createElement('div');
+      pl.className = 'unit plate surfaced';
+      pl.innerHTML = `<img src="${PLATES[book]}" alt="Book ${BOOKS[book].n} plate">`;
+      verse.appendChild(pl);
+    }
+    if (BOOKS[book].arg) {
+      const a = document.createElement('div');
+      a.className = 'unit argument surfaced';
+      a.innerHTML = `<span class="arglabel">The Argument</span>${BOOKS[book].arg}`;
+      verse.appendChild(a);
+    }
+  } else {
+    let abs = pg.s;
+    pg.b.forEach(block => {
+      const para = document.createElement('div');
+      para.className = 'para';
+      block.forEach(text => {
+        const u = buildUnit(text, abs++);
+        para.appendChild(u);
+        units.push(u);
+      });
+      verse.appendChild(para);
     });
-    verse.appendChild(para);
-  });
+  }
 
   walkon.className = '';
   const lastPage = page === pages.length - 1;
@@ -8561,7 +8577,7 @@ function renderPage() {
   if (btn) btn.addEventListener('click', () => step(1));
 
   next = 0;
-  if (RM) {
+  if (RM || !units.length) {
     units.forEach(u => u.classList.add('surfaced'));
     next = units.length;
     walkon.classList.add('shown');
@@ -8578,7 +8594,7 @@ function renderGrid() {
   pagegrid.innerHTML = '';
   for (let i = 0; i < pages.length; i++) {
     const b = document.createElement('button');
-    b.textContent = i + 1;
+    b.textContent = i === 0 ? '✦' : i;
     b.className = (walked(i) ? 'walked' : '') + (viewBook === book && i === page ? ' here' : '');
     b.addEventListener('click', () => go(viewBook, i));
     pagegrid.appendChild(b);
@@ -8592,7 +8608,7 @@ function go(b, p) {
   visited[book].add(page);   // every page you open joins your trail
   localStorage.setItem('pl-loc', JSON.stringify({ b: book, p: page }));
   saveVisited();
-  history.replaceState(null, '', `#b${book + 1}p${page + 1}`);
+  history.replaceState(null, '', `#b${book + 1}p${page}`);
   pageindex.classList.remove('open');
   where.setAttribute('aria-expanded', 'false');
   scrollTo({ top: 0, behavior: 'auto' });
@@ -8693,7 +8709,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') step(1);
 });
 
-history.replaceState(null, '', `#b${book + 1}p${page + 1}`);
+history.replaceState(null, '', `#b${book + 1}p${page}`);
 visited[book].add(page);
 saveVisited();
 renderPage();
