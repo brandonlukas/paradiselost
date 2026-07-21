@@ -8416,7 +8416,11 @@ const NOTES2 = {
 };
 
 const NOTES_BY_BOOK = [NOTES, NOTES2];
-const PLATES = ['plates/book-1.jpg', 'plates/book-2.jpg'];   // frontispieces, added as they're painted
+const PLATES = [   // frontispieces, added as they're painted (VIII, IX, X pending)
+  'plates/book-1.jpg', 'plates/book-2.jpg', 'plates/book-3.jpg', 'plates/book-4.jpg',
+  'plates/book-5.jpg', 'plates/book-6.jpg', 'plates/book-7.jpg', null,
+  null, null, 'plates/book-11.jpg', 'plates/book-12.jpg'
+];
 /* every book opens with a cover page: plate + Argument; verse pages are 1..N */
 BOOKS.forEach(bk => bk.pages.unshift({ cover: true }));
 
