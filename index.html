@@ -76,7 +76,7 @@
   .pageindex.open { grid-template-rows: 1fr; }
   .pageindex > div { overflow: hidden; }
   .pageindex-inner { padding: 1.4rem 0 0.4rem; }
-  .bookrow { display: flex; justify-content: center; gap: 1.4rem; margin-bottom: 1.1rem; }
+  .bookrow { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem 1.4rem; margin-bottom: 1.1rem; }
   .bookrow button {
     background: none;
     border: none;
@@ -8491,7 +8491,7 @@ function buildUnit(text, abs) {
   if (abs % 5 === 0) p.dataset.n = abs;
   unit.appendChild(p);
 
-  const note = NOTES_BY_BOOK[book][abs];
+  const note = (NOTES_BY_BOOK[book] || {})[abs];
   if (note) {
     p.classList.add('notable');
     p.tabIndex = 0;
@@ -8595,7 +8595,7 @@ function renderPage() {
     ? `<button id="walk-btn">walk on ›</button>`
     : book + 1 < BOOKS.length
       ? `<button id="walk-btn">walk on · Book ${BOOKS[book + 1].n} ›</button>`
-      : `<p class="fin">the end of Book ${BOOKS[book].n} · more books to come</p>`;
+      : `<p class="fin">the end · “Through Eden took their solitary way”</p>`;
   const btn = document.getElementById('walk-btn');
   if (btn) btn.addEventListener('click', () => step(1));
 
